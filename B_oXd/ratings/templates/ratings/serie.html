@@ -1,0 +1,130 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma Bibliothèque</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'ratings/css/home.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+</head>
+
+<body>
+
+    <nav class="modern-navbar">
+        <div class="navbar-left">
+            <div class="navbar-icons">
+                <a href="/">
+                    <div class="nav-icon"><img src="{% static 'ratings/icons/clapperboard.png' %}" alt="Film"></div>
+                </a>
+                <a href="/series/">
+                    <div class="nav-icon"><img src="{% static 'ratings/icons/tv.png' %}" alt="Serie"></div>
+                </a>
+                <a href="/livres/">
+                    <div class="nav-icon"><img src="{% static 'ratings/icons/open-book.png' %}" alt="Livre"></div>
+                </a>
+            </div>
+        </div>
+
+        <div class="navbar-right">
+            <div class="search-container">
+                <input type="text" id="search-input" class="search-input" placeholder="Rechercher...">
+                <div class="search-icon">🔍</div>
+            </div>
+            <a id="edit-button" class="nav-button" href="javascript:void(0);">Modifier</a>
+            <a href="/add" class="nav-button">Ajouter</a>
+        </div>
+    </nav>
+
+    <div class="card-grid" id="cards-container">
+        {% for serie in series %}
+        <div class="card" data-id="{{ serie.id }}" data-nom="{{ serie.nom_serie|lower }}"
+            data-realisateur="{{ serie.realisateur|lower }}">
+            <a href="{% url 'detail' serie.id %}">
+                <img src="{{ serie.img_serie.url }}" alt="{{ serie.nom_serie }}" class="card-image">
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        const editButton = document.getElementById('edit-button');
+        const container = document.getElementById('cards-container');
+        let sortable = null;
+        let isEditing = false;
+
+        editButton.addEventListener('click', () => {
+            isEditing = !isEditing;
+            editButton.textContent = isEditing ? 'Terminer' : 'Modifier';
+
+            if (isEditing) {
+                sortable = Sortable.create(container, {
+                    animation: 150,
+                    ghostClass: 'ghost'
+                });
+
+                container.querySelectorAll('.card').forEach(card => {
+                    card.classList.add('editing');
+                });
+
+            } else {
+                if (sortable) {
+                    const order = [];
+                    container.querySelectorAll('.card').forEach(card => {
+                        order.push(card.dataset.id);
+                        card.classList.remove('editing');
+                    });
+
+                    fetch('/update_order_serie/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({ order })
+                    });
+
+                    sortable.destroy();
+                }
+            }
+        });
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    cookie = cookie.trim();
+                    if (cookie.startsWith(name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const searchInput = document.getElementById('search-input');
+
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase();
+            const cards = document.querySelectorAll('.card');
+
+            cards.forEach(card => {
+                const nom = card.dataset.nom;
+                const realisateur = card.dataset.realisateur;
+
+                if (nom.includes(query) || realisateur.includes(query)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>

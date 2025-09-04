@@ -1,0 +1,73 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'ratings/css/detail.css' %}">
+    <title>Détails</title>
+
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            {% if film %}
+                <h1 class="film-title">{{ film.nom_film }}</h1>
+                <img src="{{ film.img_film.url }}" alt="{{ film.nom_film }}" class="film-image">
+                
+                <div class="info-container">
+                    <div class="info-row">
+                        <div class="info-item">
+                            <div class="info-label">Réalisateur</div>
+                            <div class="info-value">{{ film.realisateur }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-label">Date de sortie</div>
+                            <div class="info-value">{{ film.date_sortie }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item full-width">
+                        <div class="info-label">Durée</div>
+                        <div class="info-value">{{ film.duree }} minutes</div>
+                    </div>
+                </div>
+                
+            {% elif serie %}
+                <h1 class="serie-title">{{ serie.nom_serie }}</h1>
+                
+                <div class="info-container">
+                    <div class="info-row">
+                        <div class="info-item">
+                            <div class="info-label">Réalisateur</div>
+                            <div class="info-value">{{ serie.realisateur }}</div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-label">Date de première diffusion</div>
+                            <div class="info-value">{{ serie.date_premiere_diffusion }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item full-width">
+                        <div class="info-label">Nombre de saisons</div>
+                        <div class="info-value">{{ serie.nb_saison }}</div>
+                    </div>
+                </div>
+                
+            {% else %}
+                <p class="not-found">Film ou série introuvable.</p>
+            {% endif %}
+            
+            <a href="/" class="back-link">← Retour à l'accueil</a>
+        </div>
+
+        <div class="right-panel">
+            <h2 class="writing-area-title">Notes et commentaires</h2>
+            <textarea class="writing-area" placeholder="Écrivez vos notes, commentaires ou critiques ici..."></textarea>
+        </div>
+    </div>
+</body>
+</html>

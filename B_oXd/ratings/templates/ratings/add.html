@@ -1,0 +1,154 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma Bibliothèque</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'ratings/css/add.css' %}">
+</head>
+
+<body>
+    <nav class="modern-navbar">
+        <div class="navbar-left">
+            <div class="navbar-icons">
+                    <div class="navbar-icons">
+            <a href="/">
+                <div class="nav-icon">
+                    <img src="{% static 'ratings/icons/clapperboard.png' %}" alt="Film">
+                </div>
+            </a>
+            <a href="/series/">
+                <div class="nav-icon">
+                    <img src="{% static 'ratings/icons/tv.png' %}" alt="Serie">
+                </div>
+            </a>
+            <a href="/livres/">
+                <div class="nav-icon">
+                    <img src="{% static 'ratings/icons/open-book.png' %}" alt="Livre">
+                </div>
+            </a>
+        </div>
+        </div>
+        </div>
+        <div class="navbar-right">
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Rechercher...">
+                <div class="search-icon">🔍</div>
+            </div>
+            <a href="/" class="nav-button">Retour</a>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="form-container">
+            <form id="modern-form" action="" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- Flex container pour affichage côte à côte -->
+                <div class="form-flex">
+                    <!-- Zone gauche : image -->
+                    <div class="image-upload-zone" id="imageUploadZone">
+                        {{ form.img_film }}
+                        <img id="imagePreview" src="{% static 'ratings/img/placeholder.png' %}"
+                            class="preview-img">
+                    </div>
+
+                    <!-- Zone droite : champs -->
+                    <div class="form-right">
+                        <div class="form-fields">
+                            {% for field in form %}
+                            {% if field.name != 'img_film' %}
+                            <div class="form-group {% if field.name == 'nom_film' %}movie-search-container{% endif %}">
+                                <label for="{{ field.id_for_label }}" style="margin-bottom: 8px;">{{ field.label }}</label>
+                                {{ field }}
+
+                                {% if field.name == 'nom_film' %}
+                                <div id="movie-dropdown" class="movie-dropdown" style="display: none;"></div>
+                                {% endif %}
+
+                                {% if field.errors %}
+                                <div class="error-message">{{ field.errors }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="submit-btn">Ajouter le film</button>
+                            <a href="/" class="cancel-btn">Annuler</a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const inputNomFilm = document.querySelector('#id_nom_film');
+            const dropdown = document.querySelector('#movie-dropdown');
+            const realisateurInput = document.querySelector('#id_realisateur');
+            const dateSortieInput = document.querySelector('#id_date_sortie');
+            const dureeInput = document.querySelector('#id_duree');
+
+            inputNomFilm.addEventListener('input', function () {
+                const query = this.value;
+
+                if (query.length < 3) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+
+                fetch(`/search-movies/?q=${query}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        dropdown.innerHTML = '';
+                        if (data.results && data.results.length > 0) {
+                            data.results.slice(0, 5).forEach(movie => {
+                                const item = document.createElement('div');
+                                item.className = 'movie-item';
+                                item.textContent = `${movie.title} (${movie.release_date ? movie.release_date.slice(0, 4) : 'N/A'})`;
+
+                                item.addEventListener('click', function () {
+                                    inputNomFilm.value = movie.title;
+                                    fetch(`/get-movie-details/${movie.id}/`)
+                                        .then(r => r.json())
+                                        .then(details => {
+                                            if (details.director) realisateurInput.value = details.director;
+                                            if (details.release_year) dateSortieInput.value = details.release_year;
+                                            if (details.runtime) dureeInput.value = details.runtime;
+                                        });
+                                    dropdown.style.display = 'none';
+                                });
+
+                                dropdown.appendChild(item);
+                            });
+                            dropdown.style.display = 'block';
+                        }
+                    });
+            });
+
+            const uploadZone = document.getElementById('imageUploadZone');
+            const inputFile = document.getElementById('id_img_film');
+            const imagePreview = document.getElementById('imagePreview');
+
+            uploadZone.addEventListener('click', () => inputFile.click());
+
+            inputFile.addEventListener('change', () => {
+                if (inputFile.files && inputFile.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        imagePreview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(inputFile.files[0]);
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

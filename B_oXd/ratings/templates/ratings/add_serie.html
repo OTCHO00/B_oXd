@@ -1,0 +1,278 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma Bibliothèque - Ajouter une Série</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'ratings/css/add_serie.css' %}">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="modern-navbar">
+        <div class="navbar-left">
+            <div class="navbar-icons">
+                <a href="/">
+                    <div class="nav-icon">
+                        <img src="{% static 'ratings/icons/clapperboard.png' %}" alt="Film">
+                    </div>
+                </a>
+                <a href="/series/">
+                    <div class="nav-icon">
+                        <img src="{% static 'ratings/icons/tv.png' %}" alt="Serie">
+                    </div>
+                </a>
+                <a href="/livres/">
+                    <div class="nav-icon">
+                        <img src="{% static 'ratings/icons/open-book.png' %}" alt="Livre">
+                    </div>
+                </a>
+            </div>
+        </div>
+        <div class="navbar-right">
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Rechercher...">
+                <div class="search-icon">🔍</div>
+            </div>
+            <a href="/series/" class="nav-button">Retour</a>
+        </div>
+    </nav>
+
+    <!-- Contenu principal -->
+    <div class="main-content">
+        <div class="form-container">
+
+            <form id="modern-form" action="" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="form-flex">
+                    <!-- Zone gauche : Upload d'image -->
+                    <div class="image-upload-zone" id="imageUploadZone">
+                        {{ form.img_serie }}
+                        <img id="imagePreview" src="{% static 'ratings/img/placeholder.png' %}" class="preview-img">
+                    </div>
+
+                    <!-- Zone droite : Formulaire -->
+                    <div class="form-right">
+                        <div class="form-fields">
+                            {% for field in form %}
+                            {% if field.name != 'img_serie' %}
+                            <div class="form-group {% if field.name == 'nom_serie' %}serie-search-container{% endif %}">
+                                <label for="{{ field.id_for_label }}">
+                                    {{ field.label }}
+                                    {% if field.field.required %}
+                                    {% endif %}
+                                </label>
+
+                                {{ field }}
+
+                                <!-- Dropdown pour la recherche de séries -->
+                                {% if field.name == 'nom_serie' %}
+                                <div id="serie-dropdown" class="serie-dropdown"></div>
+                                {% endif %}
+
+                                <!-- Messages d'erreur -->
+                                {% if field.errors %}
+                                <div class="error-message">
+                                    {% for error in field.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+
+                                <!-- Texte d'aide -->
+                                {% if field.help_text %}
+                                <small class="help-text">{{ field.help_text }}</small>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <!-- Actions du formulaire -->
+                        <div class="form-actions">
+                            <button type="submit" class="submit-btn">
+                                Ajouter la série
+                            </button>
+                            <a href="/series/" class="cancel-btn">
+                                Annuler
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Éléments du DOM
+            const inputNomSerie = document.querySelector('#id_nom_serie');
+            const dropdown = document.querySelector('#serie-dropdown');
+            const realisateurInput = document.querySelector('#id_realisateur');
+            const datePremiereInput = document.querySelector('#id_date_premiere_diffusion');
+            const nbSaisonInput = document.querySelector('#id_nb_saison');
+            const uploadZone = document.getElementById('imageUploadZone');
+            const inputFile = document.getElementById('id_img_serie');
+            const imagePreview = document.getElementById('imagePreview');
+
+            // Recherche automatique de séries
+            if (inputNomSerie && dropdown) {
+                inputNomSerie.addEventListener('input', function () {
+                    const query = this.value.trim();
+
+                    // Masquer le dropdown si la requête est trop courte
+                    if (query.length < 3) {
+                        dropdown.style.display = 'none';
+                        dropdown.innerHTML = '';
+                        return;
+                    }
+
+                    // Recherche via l'API
+                    fetch(`/search-series/?q=${encodeURIComponent(query)}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            dropdown.innerHTML = '';
+
+                            if (data.results && data.results.length > 0) {
+                                // Créer les éléments du dropdown
+                                data.results.slice(0, 5).forEach(serie => {
+                                    const item = document.createElement('div');
+                                    item.className = 'serie-item';
+
+                                    // Affichage avec l'année si disponible
+                                    const year = serie.first_air_date ?
+                                        serie.first_air_date.slice(0, 4) : 'N/A';
+                                    item.textContent = `${serie.name} (${year})`;
+
+                                    // Gestionnaire de clic
+                                    item.addEventListener('click', function () {
+                                        inputNomSerie.value = serie.name;
+
+                                        // Récupérer les détails de la série
+                                        fetch(`/get-serie-details/${serie.id}/`)
+                                            .then(response => response.json())
+                                            .then(details => {
+                                                // Remplir automatiquement les champs
+                                                if (details.director && realisateurInput) {
+                                                    realisateurInput.value = details.director;
+                                                }
+                                                if (details.first_air_year && datePremiereInput) {
+                                                    datePremiereInput.value = details.first_air_year;
+                                                }
+                                                if (details.number_of_seasons && nbSaisonInput) {
+                                                    nbSaisonInput.value = details.number_of_seasons;
+                                                }
+                                            })
+                                            .catch(error => {
+                                                console.error('Erreur lors de la récupération des détails:', error);
+                                            });
+
+                                        dropdown.style.display = 'none';
+                                    });
+
+                                    dropdown.appendChild(item);
+                                });
+
+                                dropdown.style.display = 'block';
+                            } else {
+                                // Aucun résultat trouvé
+                                dropdown.innerHTML = '<div class="no-results">Aucune série trouvée</div>';
+                                dropdown.style.display = 'block';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la recherche:', error);
+                            dropdown.innerHTML = '<div class="error-results">Erreur de recherche</div>';
+                            dropdown.style.display = 'block';
+                        });
+                });
+
+                // Masquer le dropdown quand on clique ailleurs
+                document.addEventListener('click', function (event) {
+                    if (!inputNomSerie.contains(event.target) && !dropdown.contains(event.target)) {
+                        dropdown.style.display = 'none';
+                    }
+                });
+            }
+
+            // Gestion de l'upload d'image
+            if (uploadZone && inputFile && imagePreview) {
+                // Clic sur la zone d'upload
+                uploadZone.addEventListener('click', function (event) {
+                    // Éviter le clic si on clique sur l'image elle-même
+                    if (event.target !== imagePreview) {
+                        inputFile.click();
+                    }
+                });
+
+                // Drag & Drop (optionnel)
+                uploadZone.addEventListener('dragover', function (event) {
+                    event.preventDefault();
+                    uploadZone.classList.add('drag-over');
+                });
+
+                uploadZone.addEventListener('dragleave', function () {
+                    uploadZone.classList.remove('drag-over');
+                });
+
+                uploadZone.addEventListener('drop', function (event) {
+                    event.preventDefault();
+                    uploadZone.classList.remove('drag-over');
+
+                    const files = event.dataTransfer.files;
+                    if (files.length > 0) {
+                        inputFile.files = files;
+                        handleImagePreview(files[0]);
+                    }
+                });
+
+                // Changement de fichier
+                inputFile.addEventListener('change', function () {
+                    if (this.files && this.files[0]) {
+                        handleImagePreview(this.files[0]);
+                    }
+                });
+
+                // Fonction pour gérer l'aperçu de l'image
+                function handleImagePreview(file) {
+                    // Vérifier le type de fichier
+                    if (!file.type.startsWith('image/')) {
+                        alert('Veuillez sélectionner un fichier image valide.');
+                        return;
+                    }
+
+                    // Vérifier la taille (optionnel - 5MB max)
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('Le fichier est trop volumineux. Taille maximum : 5MB.');
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        imagePreview.src = e.target.result;
+                        uploadZone.classList.add('has-image');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            // Animation du formulaire (optionnel)
+            const formGroups = document.querySelectorAll('.form-group');
+            formGroups.forEach((group, index) => {
+                group.style.animationDelay = `${index * 0.1}s`;
+                group.classList.add('fade-in');
+            });
+        });
+    </script>
+</body>
+
+</html>
