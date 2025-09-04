@@ -5,4 +5,4 @@ Je voulais simplement faire une petite app pour faire un suivie pendant une lect
 
 Voici un aperçu de la page d'acceuil : 
 
-![Description de l'image](./static/B_oXd.png)
+![Description de l'image](static/B_oXd.png)
